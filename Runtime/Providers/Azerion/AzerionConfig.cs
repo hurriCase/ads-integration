@@ -3,7 +3,7 @@ using CustomUtils.Runtime.AssetLoader;
 using CustomUtils.Runtime.CustomTypes.Singletons;
 using UnityEngine;
 
-namespace AdsIntegration.Runtime.Services.Azerion
+namespace AdsIntegration.Runtime.Providers.Azerion
 {
     [Resource(FullSettingsPath, nameof(AzerionConfig), ResourceSettingsPath)]
     internal sealed class AzerionConfig : SingletonScriptableObject<AzerionConfig>

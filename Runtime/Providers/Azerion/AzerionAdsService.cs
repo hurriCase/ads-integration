@@ -2,22 +2,27 @@
 using System;
 using AdsIntegration.Runtime.Base;
 using CustomUtils.Runtime.AssetLoader;
-using JetBrains.Annotations;
 using R3;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace AdsIntegration.Runtime.Services.Azerion
+namespace AdsIntegration.Runtime.Providers.Azerion
 {
-    [PublicAPI]
-    public sealed class AzerionAdService : IAdService, IDisposable
+    internal sealed class AzerionAdsService : IAdsProvider
     {
+        public bool IsInitialized { get; private set; }
+
+        public Observable<Unit> OnRewardedSuccess => _rewardedSuccess;
+
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _isRewardedAvailable;
+        public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _isInterstitialAvailable;
+
+        private readonly ReactiveProperty<Unit> _rewardedSuccess = new();
+
         private readonly ReactiveProperty<bool> _isRewardedAvailable = new(true);
+        private readonly ReactiveProperty<bool> _isInterstitialAvailable = new(true);
 
-        private Action _onRewarded;
-
-        public void Init()
+        public void Initialize()
         {
             var gameDistribution = ResourceLoader<GameDistribution>.Load(nameof(GameDistribution));
             var createdPrefab = Object.Instantiate(gameDistribution);
@@ -31,47 +36,35 @@ namespace AdsIntegration.Runtime.Services.Azerion
             GameDistribution.OnPauseGame += PauseGame;
             GameDistribution.OnRewardedVideoSuccess += OnRewardedAdFinished;
             GameDistribution.OnRewardedVideoFailure += OnRewardedAdDisplayFailed;
+
+            IsInitialized = true;
         }
 
-        public bool ShowRewardedAd(Enum placement, Action onRewarded)
+        public void ShowRewarded(Enum placement)
         {
-            Logger.Log("[AzerionAdService::ShowRewardedAd] Showing Rewarded ad");
-
-            _onRewarded = onRewarded;
-
             GameDistribution.Instance.ShowRewardedAd();
-
-            return true;
         }
 
-        public bool TryShowInterstitial()
+        public void ShowInterstitial()
         {
             GameDistribution.Instance.ShowAd();
-            return true;
         }
+
+        public void PreloadRewarded()
+        {
+            GameDistribution.Instance.PreloadRewardedAd();
+        }
+
+        public void PreloadInterstitial() { }
 
         private void OnRewardedAdDisplayFailed()
         {
-            Logger.LogError("[AzerionAdService::OnRewardedAdDisplayFailed] Rewarded ad display failed");
+            _isRewardedAvailable.OnNext(false);
         }
 
         private void OnRewardedAdFinished()
         {
-            Logger.Log("[AzerionAdService::OnRewardedAdFinished] Rewarded successfully finished");
-
-            _onRewarded?.Invoke();
-
-            GameDistribution.Instance.PreloadRewardedAd();
-        }
-
-        private void OnInterstitialAdStarted()
-        {
-            Logger.Log("[AzerionAdService::OnInterstitialAdStarted] Showing interstitial ad");
-        }
-
-        private void OnInterstitialAdFinished()
-        {
-            Logger.Log("[AzerionAdService::OnInterstitialAdFinished] Interstitial successfully finished");
+            _rewardedSuccess?.OnNext(Unit.Default);
         }
 
         private void ResumeGame()
@@ -86,7 +79,9 @@ namespace AdsIntegration.Runtime.Services.Azerion
 
         public void Dispose()
         {
+            _rewardedSuccess.Dispose();
             _isRewardedAvailable.Dispose();
+            _isInterstitialAvailable.Dispose();
 
             GameDistribution.OnResumeGame -= ResumeGame;
             GameDistribution.OnPauseGame -= PauseGame;

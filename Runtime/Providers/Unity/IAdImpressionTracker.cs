@@ -2,7 +2,7 @@
 using JetBrains.Annotations;
 using Unity.Services.LevelPlay;
 
-namespace AdsIntegration.Runtime.Base
+namespace AdsIntegration.Runtime.Providers.Unity
 {
     /// <summary>
     /// Interface for tracking ad impressions from ad networks.
