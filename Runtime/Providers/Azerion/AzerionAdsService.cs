@@ -8,7 +8,8 @@ using Object = UnityEngine.Object;
 
 namespace AdsIntegration.Runtime.Providers.Azerion
 {
-    internal sealed class AzerionAdsService : IAdsProvider
+    internal sealed class AzerionAdsService<TPlacement> : IAdsProvider<TPlacement>
+        where TPlacement : unmanaged, Enum
     {
         public bool IsInitialized { get; private set; }
 
@@ -17,7 +18,9 @@ namespace AdsIntegration.Runtime.Providers.Azerion
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _isRewardedAvailable;
         public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _isInterstitialAvailable;
 
-        private readonly ReactiveProperty<Unit> _rewardedSuccess = new();
+        public IAdsConfig<TPlacement> AdsConfig => AzerionConfig<TPlacement>.Instance;
+
+        private readonly Subject<Unit> _rewardedSuccess = new();
 
         private readonly ReactiveProperty<bool> _isRewardedAvailable = new(true);
         private readonly ReactiveProperty<bool> _isInterstitialAvailable = new(true);
@@ -28,7 +31,7 @@ namespace AdsIntegration.Runtime.Providers.Azerion
             var createdPrefab = Object.Instantiate(gameDistribution);
             createdPrefab.name = nameof(GameDistribution);
 
-            GameDistribution.Instance.GAME_KEY = AzerionConfig.Instance.GameKey;
+            GameDistribution.Instance.GAME_KEY = AzerionConfig<TPlacement>.Instance.GameKey;
 
             GameDistribution.Instance.PreloadRewardedAd();
 
@@ -40,7 +43,7 @@ namespace AdsIntegration.Runtime.Providers.Azerion
             IsInitialized = true;
         }
 
-        public void ShowRewarded(Enum placement)
+        public void ShowRewarded(TPlacement placement)
         {
             GameDistribution.Instance.ShowRewardedAd();
         }
@@ -65,6 +68,7 @@ namespace AdsIntegration.Runtime.Providers.Azerion
         private void OnRewardedAdFinished()
         {
             _rewardedSuccess?.OnNext(Unit.Default);
+            _isRewardedAvailable.OnNext(false);
         }
 
         private void ResumeGame()

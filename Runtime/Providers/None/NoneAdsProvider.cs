@@ -1,12 +1,14 @@
 ﻿using System;
 using AdsIntegration.Runtime.Base;
+using AdsIntegration.Runtime.Providers.None;
 using PrimeTween;
 using R3;
 using UnityEngine;
 
 namespace AdsIntegration.Runtime.Providers
 {
-    internal sealed class NoneAdsProvider : IAdsProvider
+    internal sealed class NoneAdsProvider<TPlacement> : IAdsProvider<TPlacement>
+        where TPlacement : unmanaged, Enum
     {
         public bool IsInitialized { get; private set; }
 
@@ -14,6 +16,8 @@ namespace AdsIntegration.Runtime.Providers
 
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _isRewardedAvailable;
         public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _isInterstitialAvailable;
+
+        public IAdsConfig<TPlacement> AdsConfig => NoneConfig<TPlacement>.Instance;
 
         private readonly Subject<Unit> _rewardedSuccess = new();
 
@@ -27,12 +31,13 @@ namespace AdsIntegration.Runtime.Providers
             IsInitialized = true;
         }
 
-        public void ShowRewarded(Enum placement)
+        public void ShowRewarded(TPlacement placement)
         {
             Tween.Delay(FakeAdsFinishDuration, () =>
             {
                 Debug.Log($"[NoneAdsProvider::ShowRewarded] Rewarded ads was shown for {placement}");
                 _rewardedSuccess.OnNext(Unit.Default);
+                _isRewardedAvailable.OnNext(false);
             }, useUnscaledTime: true);
         }
 

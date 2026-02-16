@@ -7,7 +7,8 @@ using R3;
 
 namespace AdsIntegration.Runtime
 {
-    public sealed class AdsService : IAdsService, IDisposable
+    public sealed class AdsService<TPlacement> : IAdsService<TPlacement>, IDisposable
+        where TPlacement : unmanaged, Enum
     {
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _adsProvider?.IsRewardedAvailable;
         public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _adsProvider?.IsInterstitialAvailable;
@@ -20,28 +21,33 @@ namespace AdsIntegration.Runtime
 
         private IDisposable _preloadSubscriptions;
 
-        private IAdsProvider _adsProvider;
-        private AdsConfig _adsConfig;
+        private IAdsProvider<TPlacement> _adsProvider;
+        private IAdsConfig<TPlacement> _adsConfig;
 
         public void Initialize()
         {
             _adsProvider =
 #if GooglePlay
-                new IronSourceAdService();
+                new IronSourceAdService<TPlacement>();
 #elif AZERION && !UNITY_EDITOR
-                new AzerionAdsService();
+                new AzerionAdsService<TPlacement>();
 #elif CRAZY_GAMES && !BASIC_LAUNCH
-                new CrazyGamesAdService();
+                new CrazyGamesAdService<TPlacement>();
 #else
-                new NoneAdsProvider();
+                new NoneAdsProvider<TPlacement>();
 #endif
-
-            _adsConfig = AdsConfig.Instance;
-            var interstitialDelay = AdsConfig.Instance.TimeBetweenInterstitials;
-            _interstitialTimer = new CountdownTimer(interstitialDelay);
 
             _adsProvider.Initialize();
 
+            _adsConfig = _adsProvider.AdsConfig;
+
+            _interstitialTimer = new CountdownTimer(_adsConfig.TimeBetweenInterstitials);
+
+            SetupSubscriptions();
+        }
+
+        private void SetupSubscriptions()
+        {
             var interstitialSubscription = _adsProvider.IsInterstitialAvailable
                 .Where(this, static (_, self) => self._adsProvider.IsInitialized)
                 .Subscribe(this, static (isAvailable, self) => self.HandleInterstitialAvailabilityChange(isAvailable));
@@ -53,24 +59,24 @@ namespace AdsIntegration.Runtime
             var rewardSubscription = _adsProvider.OnRewardedSuccess
                 .Where(this, static (_, self) => self._adsProvider.IsInitialized)
                 .Do(this, static (_, self) => self._onRewarded?.Invoke())
-                .Subscribe(this, static (_, self) => self.PreloadRewardedAsync().Forget());
+                .Subscribe(this, static (_, self) => self._onRewarded = null);
 
             _preloadSubscriptions =
                 Disposable.Combine(interstitialSubscription, rewardedSubscription, rewardSubscription);
         }
 
-        public void ShowRewardedAd(Enum placement, Action onRewarded)
+        public void ShowRewardedAd(TPlacement placement, Action onRewarded)
         {
-            if (!_adsProvider.IsInitialized)
+            if (!_adsProvider.IsInitialized || !_adsConfig.SupportedPlacements[placement])
                 return;
 
             _onRewarded = onRewarded;
             _adsProvider.ShowRewarded(placement);
         }
 
-        public void ShowInterstitial()
+        public void ShowInterstitial(TPlacement placement)
         {
-            if (!_adsProvider.IsInitialized)
+            if (!_adsProvider.IsInitialized || !_adsConfig.SupportedPlacements[placement])
                 return;
 
             if (_interstitialTimer.IsRunning)

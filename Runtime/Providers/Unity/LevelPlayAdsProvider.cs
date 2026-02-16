@@ -7,7 +7,8 @@ using UnityEngine;
 
 namespace AdsIntegration.Runtime.Providers.Unity
 {
-    internal sealed class LevelPlayAdsProvider : IAdsProvider
+    internal sealed class LevelPlayAdsProvider<TPlacement> : IAdsProvider<TPlacement>
+        where TPlacement : unmanaged, Enum
     {
         public bool IsInitialized { get; private set; }
 
@@ -15,8 +16,9 @@ namespace AdsIntegration.Runtime.Providers.Unity
 
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _isRewardedAvailable;
         public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _isInterstitialAvailable;
+        public IAdsConfig<TPlacement> AdsConfig => LevelPlayConfig<TPlacement>.Instance;
 
-        private LevelPlayConfig LevelPlayConfig => LevelPlayConfig.Instance;
+        private LevelPlayConfig<TPlacement> LevelPlayConfig => LevelPlayConfig<TPlacement>.Instance;
 
         private readonly Subject<Unit> _rewardedSuccess = new();
 
@@ -42,7 +44,7 @@ namespace AdsIntegration.Runtime.Providers.Unity
             LevelPlay.Init(LevelPlayConfig.AppKey);
         }
 
-        public void ShowRewarded(Enum placement)
+        public void ShowRewarded(TPlacement placement)
         {
             var placementName = placement.ToString();
 
@@ -76,8 +78,6 @@ namespace AdsIntegration.Runtime.Providers.Unity
             IsInitialized = false;
         }
 
-        public bool IsRewardedAdAvailable() => _rewardedAd.IsAdReady();
-
         public void PreloadRewarded()
         {
             _rewardedAd.LoadAd();
@@ -108,8 +108,6 @@ namespace AdsIntegration.Runtime.Providers.Unity
         {
             _interstitialAd.ShowAd();
         }
-
-        private bool IsInterstitialAdReady() => _interstitialAd.IsAdReady();
 
         public void PreloadInterstitial()
         {

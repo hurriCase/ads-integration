@@ -14,13 +14,13 @@ namespace AdsIntegration.Runtime
         [Conditional("ADS_LOG_ALL")]
         internal static void LogWarning(string message)
         {
-            Debug.Log(message);
+            Debug.LogWarning(message);
         }
 
         [Conditional("ADS_LOG_ALL")]
         internal static void LogError(string message)
         {
-            Debug.Log(message);
+            Debug.LogError(message);
         }
     }
 }

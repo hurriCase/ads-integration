@@ -1,12 +1,14 @@
 ﻿#if CRAZY_GAMES
 using System;
 using AdsIntegration.Runtime.Base;
+using AdsIntegration.Runtime.Providers.Crazy;
 using CrazyGames;
 using R3;
 
 namespace AdsIntegration.Runtime.Providers
 {
-    internal sealed class CrazyGamesAdService : IAdsProvider
+    internal sealed class CrazyGamesAdService<TPlacement> : IAdsProvider<TPlacement>
+        where TPlacement : unmanaged, Enum
     {
         public bool IsInitialized { get; private set; }
 
@@ -14,6 +16,8 @@ namespace AdsIntegration.Runtime.Providers
 
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _isRewardedAvailable;
         public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _isInterstitialAvailable;
+
+        public IAdsConfig<TPlacement> AdsConfig => CrazyGamesConfig<TPlacement>.Instance;
 
         private readonly Subject<Unit> _rewardedSuccess = new();
 
@@ -28,7 +32,7 @@ namespace AdsIntegration.Runtime.Providers
             IsInitialized = true;
         }
 
-        public void ShowRewarded(Enum placement)
+        public void ShowRewarded(TPlacement placement)
         {
             CrazySDK.Ad.RequestAd(
                 CrazyAdType.Rewarded,
@@ -62,8 +66,8 @@ namespace AdsIntegration.Runtime.Providers
 
         private void OnRewardedAdFinished()
         {
-            Logger.Log("[CrazyGamesAdService::OnRewardedAdFinished] Rewarded successfully finished");
             _rewardedSuccess.OnNext(Unit.Default);
+            _isRewardedAvailable.OnNext(false);
         }
 
         public void Dispose()

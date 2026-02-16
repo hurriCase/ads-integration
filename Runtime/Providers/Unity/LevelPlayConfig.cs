@@ -1,21 +1,15 @@
-﻿using CustomUtils.Runtime.AssetLoader;
-using CustomUtils.Runtime.CustomTypes.Singletons;
+﻿using System;
+using CustomUtils.Runtime.AssetLoader;
 using UnityEngine;
 
 namespace AdsIntegration.Runtime.Providers.Unity
 {
-    /// <inheritdoc />
-    /// <summary>
-    /// Scriptable object to store advertising service configuration data
-    /// </summary>
-    [Resource(FullSettingsPath, nameof(LevelPlayConfig), ResourceSettingsPath)]
-    internal sealed class LevelPlayConfig : SingletonScriptableObject<LevelPlayConfig>
+    [Resource(FullSettingsPath, nameof(LevelPlayConfig<TPlacement>), ResourceSettingsPath)]
+    internal sealed class LevelPlayConfig<TPlacement> : AdsConfigBase<LevelPlayConfig<TPlacement>, TPlacement>
+        where TPlacement : unmanaged, Enum
     {
         [field: SerializeField] internal string AppKey { get; private set; }
         [field: SerializeField] internal string RewardedAdUnitId { get; private set; }
         [field: SerializeField] internal string InterstitialAdUnitId { get; private set; }
-
-        private const string FullSettingsPath = "Assets/Resources/" + ResourceSettingsPath;
-        private const string ResourceSettingsPath = "AdsIntegration";
     }
 }
