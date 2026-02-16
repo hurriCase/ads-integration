@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if GooglePlay
+using System;
 using CustomUtils.Runtime.AssetLoader;
 using UnityEngine;
 
@@ -13,3 +14,4 @@ namespace AdsIntegration.Runtime.Providers.Unity
         [field: SerializeField] internal string InterstitialAdUnitId { get; private set; }
     }
 }
+#endif

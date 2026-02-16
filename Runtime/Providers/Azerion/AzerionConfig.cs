@@ -1,4 +1,4 @@
-﻿#if AZERION
+﻿#if AZERION && !UNITY_EDITOR
 using System;
 using CustomUtils.Runtime.AssetLoader;
 using UnityEngine;

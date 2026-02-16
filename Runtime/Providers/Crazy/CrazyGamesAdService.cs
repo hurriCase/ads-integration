@@ -1,11 +1,10 @@
-﻿#if CRAZY_GAMES
+﻿#if CRAZY_GAMES && !BASIC_LAUNCH
 using System;
 using AdsIntegration.Runtime.Base;
-using AdsIntegration.Runtime.Providers.Crazy;
 using CrazyGames;
 using R3;
 
-namespace AdsIntegration.Runtime.Providers
+namespace AdsIntegration.Runtime.Providers.Crazy
 {
     internal sealed class CrazyGamesAdService<TPlacement> : IAdsProvider<TPlacement>
         where TPlacement : unmanaged, Enum

@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if GooglePlay
+using System;
 using JetBrains.Annotations;
 using Unity.Services.LevelPlay;
 
@@ -26,3 +27,4 @@ namespace AdsIntegration.Runtime.Providers.Unity
         void TrackAdImpression(LevelPlayImpressionData impressionData);
     }
 }
+#endif

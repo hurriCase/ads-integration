@@ -1,4 +1,4 @@
-﻿#if AZERION
+﻿#if AZERION && !UNITY_EDITOR
 using System;
 using AdsIntegration.Runtime.Base;
 using CustomUtils.Runtime.AssetLoader;

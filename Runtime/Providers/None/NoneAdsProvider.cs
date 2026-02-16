@@ -1,11 +1,10 @@
 ﻿using System;
 using AdsIntegration.Runtime.Base;
-using AdsIntegration.Runtime.Providers.None;
 using PrimeTween;
 using R3;
 using UnityEngine;
 
-namespace AdsIntegration.Runtime.Providers
+namespace AdsIntegration.Runtime.Providers.None
 {
     internal sealed class NoneAdsProvider<TPlacement> : IAdsProvider<TPlacement>
         where TPlacement : unmanaged, Enum

@@ -1,12 +1,14 @@
 ﻿using System;
 using AdsIntegration.Runtime.Base;
-using AdsIntegration.Runtime.Providers;
+using AdsIntegration.Runtime.Providers.Crazy;
 using Cysharp.Threading.Tasks;
 using ImprovedTimers;
+using JetBrains.Annotations;
 using R3;
 
 namespace AdsIntegration.Runtime
 {
+    [PublicAPI]
     public sealed class AdsService<TPlacement> : IAdsService<TPlacement>, IDisposable
         where TPlacement : unmanaged, Enum
     {
@@ -28,7 +30,7 @@ namespace AdsIntegration.Runtime
         {
             _adsProvider =
 #if GooglePlay
-                new IronSourceAdService<TPlacement>();
+                new LevelPlayAdsProvider<TPlacement>();
 #elif AZERION && !UNITY_EDITOR
                 new AzerionAdsService<TPlacement>();
 #elif CRAZY_GAMES && !BASIC_LAUNCH

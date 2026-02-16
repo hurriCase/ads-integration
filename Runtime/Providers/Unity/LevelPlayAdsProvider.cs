@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if GooglePlay
+using System;
 using System.Diagnostics;
 using AdsIntegration.Runtime.Base;
 using R3;
@@ -184,3 +185,4 @@ namespace AdsIntegration.Runtime.Providers.Unity
         }
     }
 }
+#endif
