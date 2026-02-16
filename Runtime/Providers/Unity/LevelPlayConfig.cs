@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if LEVEL_PLAY
+using System;
 using AdsIntegration.Runtime.Base;
 using CustomUtils.Runtime.AssetLoader;
 using UnityEngine;
@@ -14,3 +15,4 @@ namespace AdsIntegration.Runtime.Providers.Unity
         [field: SerializeField] internal string InterstitialAdUnitId { get; private set; }
     }
 }
+#endif

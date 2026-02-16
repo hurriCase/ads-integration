@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if AZERION
+using System;
 using AdsIntegration.Runtime.Base;
 using CustomUtils.Runtime.AssetLoader;
 using JetBrains.Annotations;
@@ -100,3 +101,4 @@ namespace AdsIntegration.Runtime.Providers.Azerion
         }
     }
 }
+#endif

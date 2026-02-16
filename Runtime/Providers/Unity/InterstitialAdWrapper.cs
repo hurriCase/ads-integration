@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if LEVEL_PLAY
+using System;
 using R3;
 using Unity.Services.LevelPlay;
 
@@ -35,3 +36,4 @@ namespace AdsIntegration.Runtime.Providers.Unity
         }
     }
 }
+#endif

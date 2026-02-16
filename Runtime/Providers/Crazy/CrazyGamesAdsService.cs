@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if CRAZY_GAMES
+using System;
 using AdsIntegration.Runtime.Base;
 using CrazyGames;
 using JetBrains.Annotations;
@@ -76,3 +77,4 @@ namespace AdsIntegration.Runtime.Providers.Crazy
         }
     }
 }
+#endif

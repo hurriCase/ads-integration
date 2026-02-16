@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if LEVEL_PLAY
+using System;
 using System.Diagnostics;
 using AdsIntegration.Runtime.Base;
 using JetBrains.Annotations;
@@ -123,3 +124,4 @@ namespace AdsIntegration.Runtime.Providers.Unity
         }
     }
 }
+#endif
