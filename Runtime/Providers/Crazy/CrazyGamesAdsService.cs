@@ -1,12 +1,13 @@
-﻿#if CRAZY_GAMES && !BASIC_LAUNCH
-using System;
+﻿using System;
 using AdsIntegration.Runtime.Base;
 using CrazyGames;
+using JetBrains.Annotations;
 using R3;
 
 namespace AdsIntegration.Runtime.Providers.Crazy
 {
-    internal sealed class CrazyGamesAdService<TPlacement> : IAdsProvider<TPlacement>
+    [PublicAPI]
+    public sealed class CrazyGamesAdsProvider<TPlacement> : IAdsProvider<TPlacement>
         where TPlacement : unmanaged, Enum
     {
         public bool IsInitialized { get; private set; }
@@ -15,8 +16,6 @@ namespace AdsIntegration.Runtime.Providers.Crazy
 
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _isRewardedAvailable;
         public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _isInterstitialAvailable;
-
-        public IAdsConfig<TPlacement> AdsConfig => CrazyGamesConfig<TPlacement>.Instance;
 
         private readonly Subject<Unit> _rewardedSuccess = new();
 
@@ -35,8 +34,8 @@ namespace AdsIntegration.Runtime.Providers.Crazy
         {
             CrazySDK.Ad.RequestAd(
                 CrazyAdType.Rewarded,
-                static () => Logger.Log("[CrazyGamesAdService::OnRewardedAdStarted] Showing Rewarded ads"),
-                static error => Logger.LogError($"[CrazyGamesAdService::OnRewardedAdDisplayFailed] " +
+                static () => Logger.Log("[CrazyGamesAdsProvider::OnRewardedAdStarted] Showing Rewarded ads"),
+                static error => Logger.LogError($"[CrazyGamesAdsProvider::OnRewardedAdDisplayFailed] " +
                                                 $"Rewarded ad display failed with {error.message} error"),
                 OnRewardedAdFinished);
         }
@@ -45,12 +44,12 @@ namespace AdsIntegration.Runtime.Providers.Crazy
         {
             CrazySDK.Ad.RequestAd(
                 CrazyAdType.Midgame,
-                static () => Logger.Log("[CrazyGamesAdService::OnInterstitialAdStarted] " +
+                static () => Logger.Log("[CrazyGamesAdsProvider::OnInterstitialAdStarted] " +
                                         "Showing interstitial ads"),
-                static error => Logger.LogError($"[CrazyGamesAdService::OnInterstitialAdDisplayFailed] " +
+                static error => Logger.LogError($"[CrazyGamesAdsProvider::OnInterstitialAdDisplayFailed] " +
                                                 $"Interstitial ad display failed with {error.message} error"),
                 static () =>
-                    Logger.Log("[CrazyGamesAdService::OnInterstitialAdFinished] Interstitial successfully finished"));
+                    Logger.Log("[CrazyGamesAdsProvider::OnInterstitialAdFinished] Interstitial successfully finished"));
         }
 
         public void PreloadRewarded()
@@ -77,4 +76,3 @@ namespace AdsIntegration.Runtime.Providers.Crazy
         }
     }
 }
-#endif

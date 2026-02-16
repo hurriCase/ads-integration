@@ -1,7 +1,6 @@
 ﻿using System;
 using AdsIntegration.Runtime.Base;
-using AdsIntegration.Runtime.Providers.Crazy;
-using Cysharp.Threading.Tasks;
+using CustomUtils.Runtime.Extensions.Observables;
 using ImprovedTimers;
 using JetBrains.Annotations;
 using R3;
@@ -12,59 +11,43 @@ namespace AdsIntegration.Runtime
     public sealed class AdsService<TPlacement> : IAdsService<TPlacement>, IDisposable
         where TPlacement : unmanaged, Enum
     {
-        public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _adsProvider?.IsRewardedAvailable;
-        public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _adsProvider?.IsInterstitialAvailable;
+        public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _adsProvider.IsRewardedAvailable;
+        public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _adsProvider.IsInterstitialAvailable;
 
         private Action _onRewarded;
-        private int _rewardLoadAttemptCount;
 
         private CountdownTimer _interstitialTimer;
-        private int _interstitialLoadAttemptCount;
 
-        private IDisposable _preloadSubscriptions;
+        private IDisposable _rewardSubscription;
 
-        private IAdsProvider<TPlacement> _adsProvider;
-        private IAdsConfig<TPlacement> _adsConfig;
+        private readonly IAdsProvider<TPlacement> _adsProvider;
+        private readonly AdsConfigBase<TPlacement> _adsConfig;
+        private readonly AdsPreloader _rewardedPreloader;
+        private readonly AdsPreloader _interstitialPreloader;
 
-        public void Initialize()
+        public AdsService(IAdsProvider<TPlacement> adsProvider, AdsConfigBase<TPlacement> adsConfig)
         {
-            _adsProvider =
-#if GooglePlay
-                new LevelPlayAdsProvider<TPlacement>();
-#elif AZERION && !UNITY_EDITOR
-                new AzerionAdsService<TPlacement>();
-#elif CRAZY_GAMES && !BASIC_LAUNCH
-                new CrazyGamesAdService<TPlacement>();
-#else
-                new NoneAdsProvider<TPlacement>();
-#endif
+            _adsProvider = adsProvider;
+            _adsConfig = adsConfig;
 
             _adsProvider.Initialize();
 
-            _adsConfig = _adsProvider.AdsConfig;
+            _rewardedPreloader = new AdsPreloader(
+                _adsProvider.IsRewardedAvailable,
+                _adsProvider.PreloadRewarded,
+                _adsConfig.MaxRewardedLoadAttempts,
+                _adsConfig.RetryLoadDelay);
+
+            _interstitialPreloader = new AdsPreloader(
+                _adsProvider.IsInterstitialAvailable,
+                _adsProvider.PreloadInterstitial,
+                _adsConfig.MaxInterstitialLoadAttempts,
+                _adsConfig.RetryLoadDelay);
 
             _interstitialTimer = new CountdownTimer(_adsConfig.TimeBetweenInterstitials);
 
-            SetupSubscriptions();
-        }
-
-        private void SetupSubscriptions()
-        {
-            var interstitialSubscription = _adsProvider.IsInterstitialAvailable
-                .Where(this, static (_, self) => self._adsProvider.IsInitialized)
-                .Subscribe(this, static (isAvailable, self) => self.HandleInterstitialAvailabilityChange(isAvailable));
-
-            var rewardedSubscription = _adsProvider.IsRewardedAvailable
-                .Where(this, static (_, self) => self._adsProvider.IsInitialized)
-                .Subscribe(this, static (isAvailable, self) => self.HandleRewardedAvailabilityChange(isAvailable));
-
-            var rewardSubscription = _adsProvider.OnRewardedSuccess
-                .Where(this, static (_, self) => self._adsProvider.IsInitialized)
-                .Do(this, static (_, self) => self._onRewarded?.Invoke())
-                .Subscribe(this, static (_, self) => self._onRewarded = null);
-
-            _preloadSubscriptions =
-                Disposable.Combine(interstitialSubscription, rewardedSubscription, rewardSubscription);
+            _rewardSubscription = _adsProvider.OnRewardedSuccess
+                .SubscribeSelf(this, static self => self.ExecuteReward());
         }
 
         public void ShowRewardedAd(TPlacement placement, Action onRewarded)
@@ -90,62 +73,21 @@ namespace AdsIntegration.Runtime
             _interstitialTimer.Start();
         }
 
-        private void HandleInterstitialAvailabilityChange(bool isAvailable)
+        private void ExecuteReward()
         {
-            if (isAvailable)
-            {
-                _interstitialLoadAttemptCount = 0;
-                return;
-            }
-
-            PreloadInterstitialAsync().Forget();
-        }
-
-        private void HandleRewardedAvailabilityChange(bool isAvailable)
-        {
-            if (isAvailable)
-            {
-                _rewardLoadAttemptCount = 0;
-                return;
-            }
-
-            PreloadRewardedAsync().Forget();
-        }
-
-        private async UniTask PreloadRewardedAsync()
-        {
-            if (!_adsProvider.IsInitialized || _adsProvider.IsRewardedAvailable.CurrentValue)
+            if (!_adsProvider.IsInitialized)
                 return;
 
-            if (_rewardLoadAttemptCount >= _adsConfig.MaxRewardedLoadAttempts)
-                return;
-
-            await UniTask.WaitForSeconds(_adsConfig.RetryLoadDelay);
-
-            _adsProvider.PreloadRewarded();
-
-            _rewardLoadAttemptCount++;
-        }
-
-        private async UniTask PreloadInterstitialAsync()
-        {
-            if (!_adsProvider.IsInitialized || _adsProvider.IsInterstitialAvailable.CurrentValue)
-                return;
-
-            if (_interstitialLoadAttemptCount >= _adsConfig.MaxInterstitialLoadAttempts)
-                return;
-
-            await UniTask.WaitForSeconds(_adsConfig.RetryLoadDelay);
-
-            _adsProvider.PreloadInterstitial();
-
-            _interstitialLoadAttemptCount++;
+            _onRewarded?.Invoke();
+            _onRewarded = null;
         }
 
         public void Dispose()
         {
             _interstitialTimer.Dispose();
-            _preloadSubscriptions.Dispose();
+            _rewardSubscription.Dispose();
+            _rewardedPreloader.Dispose();
+            _interstitialPreloader.Dispose();
 
             _adsProvider.Dispose();
         }

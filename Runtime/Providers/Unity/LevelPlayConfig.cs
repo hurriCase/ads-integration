@@ -1,12 +1,12 @@
-﻿#if GooglePlay
-using System;
+﻿using System;
+using AdsIntegration.Runtime.Base;
 using CustomUtils.Runtime.AssetLoader;
 using UnityEngine;
 
 namespace AdsIntegration.Runtime.Providers.Unity
 {
     [Resource(FullSettingsPath, nameof(LevelPlayConfig<TPlacement>), ResourceSettingsPath)]
-    internal sealed class LevelPlayConfig<TPlacement> : AdsConfigBase<LevelPlayConfig<TPlacement>, TPlacement>
+    public sealed class LevelPlayConfig<TPlacement> : AdsConfigBase<TPlacement>
         where TPlacement : unmanaged, Enum
     {
         [field: SerializeField] internal string AppKey { get; private set; }
@@ -14,4 +14,3 @@ namespace AdsIntegration.Runtime.Providers.Unity
         [field: SerializeField] internal string InterstitialAdUnitId { get; private set; }
     }
 }
-#endif

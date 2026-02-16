@@ -1,11 +1,10 @@
-﻿#if CRAZY_GAMES && !BASIC_LAUNCH
-using System;
+﻿using System;
+using AdsIntegration.Runtime.Base;
 using CustomUtils.Runtime.AssetLoader;
 
 namespace AdsIntegration.Runtime.Providers.Crazy
 {
     [Resource(FullSettingsPath, nameof(CrazyGamesConfig<TPlacement>), ResourceSettingsPath)]
-    internal sealed class CrazyGamesConfig<TPlacement> : AdsConfigBase<CrazyGamesConfig<TPlacement>, TPlacement>
+    public sealed class CrazyGamesConfig<TPlacement> : AdsConfigBase<TPlacement>
         where TPlacement : unmanaged, Enum { }
 }
-#endif

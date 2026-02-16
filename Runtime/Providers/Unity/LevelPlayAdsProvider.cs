@@ -1,38 +1,36 @@
-﻿#if GooglePlay
-using System;
+﻿using System;
 using System.Diagnostics;
 using AdsIntegration.Runtime.Base;
+using JetBrains.Annotations;
 using R3;
 using Unity.Services.LevelPlay;
 using UnityEngine;
 
 namespace AdsIntegration.Runtime.Providers.Unity
 {
-    internal sealed class LevelPlayAdsProvider<TPlacement> : IAdsProvider<TPlacement>
+    [PublicAPI]
+    public sealed class LevelPlayAdsProvider<TPlacement> : IAdsProvider<TPlacement>
         where TPlacement : unmanaged, Enum
     {
         public bool IsInitialized { get; private set; }
 
         public Observable<Unit> OnRewardedSuccess => _rewardedSuccess;
-
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _isRewardedAvailable;
         public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _isInterstitialAvailable;
-        public IAdsConfig<TPlacement> AdsConfig => LevelPlayConfig<TPlacement>.Instance;
-
-        private LevelPlayConfig<TPlacement> LevelPlayConfig => LevelPlayConfig<TPlacement>.Instance;
 
         private readonly Subject<Unit> _rewardedSuccess = new();
-
         private readonly ReactiveProperty<bool> _isRewardedAvailable = new();
         private readonly ReactiveProperty<bool> _isInterstitialAvailable = new();
 
+        private RewardedAdWrapper _rewardedAd;
+        private InterstitialAdWrapper _interstitialAd;
+
         private readonly IAdImpressionTracker _adImpressionTracker;
+        private readonly LevelPlayConfig<TPlacement> _levelPlayConfig;
 
-        private LevelPlayRewardedAd _rewardedAd;
-        private LevelPlayInterstitialAd _interstitialAd;
-
-        internal LevelPlayAdsProvider(IAdImpressionTracker adImpressionTracker)
+        public LevelPlayAdsProvider(LevelPlayConfig<TPlacement> levelPlayConfig, IAdImpressionTracker adImpressionTracker)
         {
+            _levelPlayConfig = levelPlayConfig;
             _adImpressionTracker = adImpressionTracker;
         }
 
@@ -42,30 +40,13 @@ namespace AdsIntegration.Runtime.Providers.Unity
             LevelPlay.OnInitFailed += OnSdkInitFailed;
             LevelPlay.OnImpressionDataReady += OnImpressionDataReady;
 
-            LevelPlay.Init(LevelPlayConfig.AppKey);
-        }
-
-        public void ShowRewarded(TPlacement placement)
-        {
-            var placementName = placement.ToString();
-
-            _rewardedAd.ShowAd(placementName);
+            LevelPlay.Init(_levelPlayConfig.AppKey);
         }
 
         private void OnSdkInitSuccess(LevelPlayConfiguration levelPlayConfiguration)
         {
-            _rewardedAd = new LevelPlayRewardedAd(LevelPlayConfig.RewardedAdUnitId);
-
-            _rewardedAd.OnAdRewarded += OnAdRewarded;
-            _rewardedAd.OnAdLoaded += OnRewardedAdLoaded;
-            _rewardedAd.OnAdLoadFailed += OnRewardedAdLoadFailed;
-            _rewardedAd.OnAdClosed += OnRewardedAdClosed;
-
-            _interstitialAd = new LevelPlayInterstitialAd(LevelPlayConfig.InterstitialAdUnitId);
-
-            _interstitialAd.OnAdLoaded += OnInterstitialAdLoaded;
-            _interstitialAd.OnAdLoadFailed += OnInterstitialAdLoadFailed;
-            _interstitialAd.OnAdClosed += OnInterstitialAdClosed;
+            _rewardedAd = new RewardedAdWrapper(_levelPlayConfig.RewardedAdUnitId, _isRewardedAvailable, _rewardedSuccess);
+            _interstitialAd = new InterstitialAdWrapper(_levelPlayConfig.InterstitialAdUnitId, _isInterstitialAvailable);
 
             Application.focusChanged += OnApplicationFocusChanged;
 
@@ -79,55 +60,30 @@ namespace AdsIntegration.Runtime.Providers.Unity
             IsInitialized = false;
         }
 
-        public void PreloadRewarded()
+        public void ShowRewarded(TPlacement placement)
         {
-            _rewardedAd.LoadAd();
-        }
-
-        private void OnRewardedAdLoaded(LevelPlayAdInfo adInfo)
-        {
-            _isRewardedAvailable.OnNext(true);
-        }
-
-        private void OnRewardedAdLoadFailed(LevelPlayAdError adError)
-        {
-            _isRewardedAvailable.OnNext(false);
-        }
-
-        private void OnAdRewarded(LevelPlayAdInfo adInfo, LevelPlayReward reward)
-        {
-            _rewardedSuccess.OnNext(Unit.Default);
-            _isRewardedAvailable.OnNext(false);
-        }
-
-        private void OnRewardedAdClosed(LevelPlayAdInfo adInfo)
-        {
-            _isRewardedAvailable.OnNext(false);
+            _rewardedAd.Show(placement.ToString());
         }
 
         public void ShowInterstitial()
         {
-            _interstitialAd.ShowAd();
+            _interstitialAd.Show();
+        }
+
+        public void PreloadRewarded()
+        {
+            if (!IsInitialized)
+                return;
+
+            _rewardedAd.Load();
         }
 
         public void PreloadInterstitial()
         {
-            _interstitialAd.LoadAd();
-        }
+            if (!IsInitialized)
+                return;
 
-        private void OnInterstitialAdLoaded(LevelPlayAdInfo adInfo)
-        {
-            _isInterstitialAvailable.OnNext(true);
-        }
-
-        private void OnInterstitialAdLoadFailed(LevelPlayAdError adError)
-        {
-            _isInterstitialAvailable.OnNext(false);
-        }
-
-        private void OnInterstitialAdClosed(LevelPlayAdInfo adInfo)
-        {
-            _isInterstitialAvailable.OnNext(false);
+            _interstitialAd.Load();
         }
 
         private void OnImpressionDataReady(LevelPlayImpressionData impressionData)
@@ -142,7 +98,6 @@ namespace AdsIntegration.Runtime.Providers.Unity
         private void EnableTestMode()
         {
             Logger.Log("[LevelPlayAdsProvider::EnableTestMode] Launching test suite");
-
             LevelPlay.LaunchTestSuite();
         }
 
@@ -157,32 +112,14 @@ namespace AdsIntegration.Runtime.Providers.Unity
             LevelPlay.OnInitFailed -= OnSdkInitFailed;
             LevelPlay.OnImpressionDataReady -= OnImpressionDataReady;
 
-            if (_rewardedAd != null)
-            {
-                _rewardedAd.OnAdRewarded -= OnAdRewarded;
-                _rewardedAd.OnAdLoaded -= OnRewardedAdLoaded;
-                _rewardedAd.OnAdLoadFailed -= OnRewardedAdLoadFailed;
-                _rewardedAd.OnAdClosed -= OnRewardedAdClosed;
-                _rewardedAd.Dispose();
-            }
+            _rewardedAd?.Dispose();
+            _interstitialAd?.Dispose();
 
             _rewardedSuccess.Dispose();
             _isRewardedAvailable.Dispose();
-
-            if (_interstitialAd != null)
-            {
-                _interstitialAd.OnAdLoaded -= OnInterstitialAdLoaded;
-                _interstitialAd.OnAdLoadFailed -= OnInterstitialAdLoadFailed;
-                _interstitialAd.OnAdClosed -= OnInterstitialAdClosed;
-                _interstitialAd.Dispose();
-            }
-
             _isInterstitialAvailable.Dispose();
-
-            _adImpressionTracker.Dispose();
 
             Application.focusChanged -= OnApplicationFocusChanged;
         }
     }
 }
-#endif

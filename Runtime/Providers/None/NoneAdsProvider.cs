@@ -1,12 +1,14 @@
 ﻿using System;
 using AdsIntegration.Runtime.Base;
+using JetBrains.Annotations;
 using PrimeTween;
 using R3;
 using UnityEngine;
 
 namespace AdsIntegration.Runtime.Providers.None
 {
-    internal sealed class NoneAdsProvider<TPlacement> : IAdsProvider<TPlacement>
+    [PublicAPI]
+    public sealed class NoneAdsProvider<TPlacement> : IAdsProvider<TPlacement>
         where TPlacement : unmanaged, Enum
     {
         public bool IsInitialized { get; private set; }
@@ -15,8 +17,6 @@ namespace AdsIntegration.Runtime.Providers.None
 
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _isRewardedAvailable;
         public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _isInterstitialAvailable;
-
-        public IAdsConfig<TPlacement> AdsConfig => NoneConfig<TPlacement>.Instance;
 
         private readonly Subject<Unit> _rewardedSuccess = new();
 
@@ -43,16 +43,19 @@ namespace AdsIntegration.Runtime.Providers.None
         public void ShowInterstitial()
         {
             Debug.Log("[NoneAdsProvider::ShowInterstitial] Interstitial ads was shown");
+            _isInterstitialAvailable.OnNext(false);
         }
 
         public void PreloadRewarded()
         {
             Debug.Log("[NoneAdsProvider::PreloadRewarded] Rewarded ads was preloaded");
+            _isRewardedAvailable.OnNext(true);
         }
 
         public void PreloadInterstitial()
         {
             Debug.Log("[NoneAdsProvider::PreloadInterstitial] Interstitial ads was preloaded");
+            _isInterstitialAvailable.OnNext(true);
         }
 
         public void Dispose()

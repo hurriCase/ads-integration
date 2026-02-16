@@ -9,7 +9,6 @@ namespace AdsIntegration.Runtime.Base
     {
         ReadOnlyReactiveProperty<bool> IsRewardedAvailable { get; }
         ReadOnlyReactiveProperty<bool> IsInterstitialAvailable { get; }
-        void Initialize();
         void ShowRewardedAd(TPlacement placement, Action onRewarded);
         void ShowInterstitial(TPlacement placement);
     }

@@ -1,14 +1,15 @@
-﻿#if AZERION && !UNITY_EDITOR
-using System;
+﻿using System;
 using AdsIntegration.Runtime.Base;
 using CustomUtils.Runtime.AssetLoader;
+using JetBrains.Annotations;
 using R3;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
 namespace AdsIntegration.Runtime.Providers.Azerion
 {
-    internal sealed class AzerionAdsService<TPlacement> : IAdsProvider<TPlacement>
+    [PublicAPI]
+    public sealed class AzerionAdsService<TPlacement> : IAdsProvider<TPlacement>
         where TPlacement : unmanaged, Enum
     {
         public bool IsInitialized { get; private set; }
@@ -18,12 +19,17 @@ namespace AdsIntegration.Runtime.Providers.Azerion
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _isRewardedAvailable;
         public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _isInterstitialAvailable;
 
-        public IAdsConfig<TPlacement> AdsConfig => AzerionConfig<TPlacement>.Instance;
-
         private readonly Subject<Unit> _rewardedSuccess = new();
 
         private readonly ReactiveProperty<bool> _isRewardedAvailable = new(true);
         private readonly ReactiveProperty<bool> _isInterstitialAvailable = new(true);
+
+        private readonly AzerionConfig<TPlacement> _adsConfig;
+
+        public AzerionAdsService(AzerionConfig<TPlacement> adsConfig)
+        {
+            _adsConfig = adsConfig;
+        }
 
         public void Initialize()
         {
@@ -31,7 +37,7 @@ namespace AdsIntegration.Runtime.Providers.Azerion
             var createdPrefab = Object.Instantiate(gameDistribution);
             createdPrefab.name = nameof(GameDistribution);
 
-            GameDistribution.Instance.GAME_KEY = AzerionConfig<TPlacement>.Instance.GameKey;
+            GameDistribution.Instance.GAME_KEY = _adsConfig.GameKey;
 
             GameDistribution.Instance.PreloadRewardedAd();
 
@@ -67,7 +73,7 @@ namespace AdsIntegration.Runtime.Providers.Azerion
 
         private void OnRewardedAdFinished()
         {
-            _rewardedSuccess?.OnNext(Unit.Default);
+            _rewardedSuccess.OnNext(Unit.Default);
             _isRewardedAvailable.OnNext(false);
         }
 
@@ -94,4 +100,3 @@ namespace AdsIntegration.Runtime.Providers.Azerion
         }
     }
 }
-#endif
