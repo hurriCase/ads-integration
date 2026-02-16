@@ -52,21 +52,26 @@ namespace AdsIntegration.Runtime
 
         public void ShowRewardedAd(TPlacement placement, Action onRewarded)
         {
-            if (!_adsProvider.IsInitialized || !_adsConfig.SupportedPlacements[placement])
+            if (!ValidateRequest(placement, nameof(ShowRewardedAd)))
                 return;
 
+            Logger.Log($"[AdsService::ShowRewardedAd] Showing rewarded ad for {placement}");
             _onRewarded = onRewarded;
             _adsProvider.ShowRewarded(placement);
         }
 
         public void ShowInterstitial(TPlacement placement)
         {
-            if (!_adsProvider.IsInitialized || !_adsConfig.SupportedPlacements[placement])
+            if (!ValidateRequest(placement, nameof(ShowInterstitial)))
                 return;
 
             if (_interstitialTimer.IsRunning)
+            {
+                Logger.LogWarning("[AdsService::ShowInterstitial] Cooldown is active, skipping");
                 return;
+            }
 
+            Logger.Log($"[AdsService::ShowInterstitial] Showing interstitial for {placement}");
             _adsProvider.ShowInterstitial();
 
             _interstitialTimer.Reset();
@@ -76,10 +81,29 @@ namespace AdsIntegration.Runtime
         private void ExecuteReward()
         {
             if (!_adsProvider.IsInitialized)
+            {
+                Logger.LogWarning("[AdsService::ExecuteReward] Provider is not initialized, skipping reward");
                 return;
+            }
 
+            Logger.Log("[AdsService::ExecuteReward] Reward executed successfully");
             _onRewarded?.Invoke();
             _onRewarded = null;
+        }
+
+        private bool ValidateRequest(TPlacement placement, string callerName)
+        {
+            if (!_adsProvider.IsInitialized)
+            {
+                Logger.LogWarning($"[AdsService::{callerName}] Provider is not initialized, skipping {placement}");
+                return false;
+            }
+
+            if (_adsConfig.SupportedPlacements[placement])
+                return true;
+
+            Logger.LogWarning($"[AdsService::{callerName}] Placement {placement} is not supported");
+            return false;
         }
 
         public void Dispose()
