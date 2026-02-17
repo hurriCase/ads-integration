@@ -8,7 +8,7 @@ using R3;
 namespace AdsIntegration.Runtime
 {
     [PublicAPI]
-    public sealed class AdsService<TPlacement> : IAdsService<TPlacement>, IDisposable
+    public class AdsService<TPlacement> : IAdsService<TPlacement>, IDisposable
         where TPlacement : unmanaged, Enum
     {
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _adsProvider.IsRewardedAvailable;
