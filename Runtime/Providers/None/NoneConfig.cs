@@ -5,6 +5,6 @@ using JetBrains.Annotations;
 namespace AdsIntegration.Runtime.Providers.None
 {
     [PublicAPI]
-    public sealed class NoneConfig<TPlacement> : AdsConfigBase<TPlacement>
+    public class NoneConfig<TPlacement> : AdsConfigBase<TPlacement>
         where TPlacement : unmanaged, Enum { }
 }
