@@ -7,32 +7,39 @@ namespace AdsIntegration.Runtime.Providers.Unity
 {
     internal sealed class InterstitialAdWrapper : IDisposable
     {
-        private readonly LevelPlayInterstitialAd _ad;
+        private readonly LevelPlayInterstitialAd _interstitialAd;
         private readonly ReactiveProperty<bool> _isAvailable;
 
         internal InterstitialAdWrapper(string adUnitId, ReactiveProperty<bool> isAvailable)
         {
             _isAvailable = isAvailable;
-            _ad = new LevelPlayInterstitialAd(adUnitId);
+            _interstitialAd = new LevelPlayInterstitialAd(adUnitId);
 
-            _ad.OnAdLoaded += OnLoaded;
-            _ad.OnAdLoadFailed += OnLoadFailed;
-            _ad.OnAdClosed += OnClosed;
+            _interstitialAd.OnAdLoaded += OnLoaded;
+            _interstitialAd.OnAdLoadFailed += OnLoadFailed;
+            _interstitialAd.OnAdClosed += OnClosed;
         }
 
-        internal void Show() => _ad.ShowAd();
-        internal void Load() => _ad.LoadAd();
+        internal void Show()
+        {
+            _interstitialAd.ShowAd();
+        }
 
-        private void OnLoaded(LevelPlayAdInfo info) => _isAvailable.OnNext(true);
-        private void OnLoadFailed(LevelPlayAdError error) => _isAvailable.OnNext(false);
-        private void OnClosed(LevelPlayAdInfo info) => _isAvailable.OnNext(false);
+        internal void Load()
+        {
+            _interstitialAd.LoadAd();
+        }
+
+        private void OnLoaded(LevelPlayAdInfo info) => _isAvailable.OnNext(_interstitialAd.IsAdReady());
+        private void OnLoadFailed(LevelPlayAdError error) => _isAvailable.OnNext(_interstitialAd.IsAdReady());
+        private void OnClosed(LevelPlayAdInfo info) => _isAvailable.OnNext(_interstitialAd.IsAdReady());
 
         public void Dispose()
         {
-            _ad.OnAdLoaded -= OnLoaded;
-            _ad.OnAdLoadFailed -= OnLoadFailed;
-            _ad.OnAdClosed -= OnClosed;
-            _ad.Dispose();
+            _interstitialAd.OnAdLoaded -= OnLoaded;
+            _interstitialAd.OnAdLoadFailed -= OnLoadFailed;
+            _interstitialAd.OnAdClosed -= OnClosed;
+            _interstitialAd.Dispose();
         }
     }
 }

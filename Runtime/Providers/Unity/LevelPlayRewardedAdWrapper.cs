@@ -23,8 +23,15 @@ namespace AdsIntegration.Runtime.Providers.Unity
             _rewardedAd.OnAdClosed += OnClosed;
         }
 
-        internal void Show(string placement) => _rewardedAd.ShowAd(placement);
-        internal void Load() => _rewardedAd.LoadAd();
+        internal void Show(string placement)
+        {
+            _rewardedAd.ShowAd(placement);
+        }
+
+        internal void Load()
+        {
+            _rewardedAd.LoadAd();
+        }
 
         private void OnRewardedAdRewarded(LevelPlayAdInfo info, LevelPlayReward reward)
         {
