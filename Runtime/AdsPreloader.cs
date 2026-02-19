@@ -8,7 +8,6 @@ namespace AdsIntegration.Runtime
 {
     internal sealed class AdsPreloader : IDisposable
     {
-        private readonly ReadOnlyReactiveProperty<bool> _isAvailable;
         private readonly Action _preload;
         private readonly int _maxAttempts;
         private readonly float _retryDelay;
@@ -18,18 +17,13 @@ namespace AdsIntegration.Runtime
 
         private readonly IDisposable _availabilitySubscription;
 
-        internal AdsPreloader(
-            ReadOnlyReactiveProperty<bool> isAvailable,
-            Action preload,
-            int maxAttempts,
-            float retryDelay)
+        internal AdsPreloader(Observable<bool> isAvailable, Action preload, int maxAttempts, float retryDelay)
         {
-            _isAvailable = isAvailable;
             _preload = preload;
             _maxAttempts = maxAttempts;
             _retryDelay = retryDelay;
 
-            _availabilitySubscription = _isAvailable
+            _availabilitySubscription = isAvailable
                 .Subscribe(this, static (isAvailable, self) => self.HandleAvailabilityChange(isAvailable));
         }
 
@@ -44,6 +38,14 @@ namespace AdsIntegration.Runtime
             if (_loadAttemptCount >= _maxAttempts)
                 return;
 
+            _loadAttemptCount++;
+
+            if (_loadAttemptCount == 1)
+            {
+                _preload();
+                return;
+            }
+
             var token = CancellationExtensions.GetFreshToken(ref _cancellationSource);
             PreloadAsync(token).Forget();
         }
@@ -52,11 +54,7 @@ namespace AdsIntegration.Runtime
         {
             await UniTask.WaitForSeconds(_retryDelay, cancellationToken: cancellationToken);
 
-            if (_isAvailable.CurrentValue)
-                return;
-
             _preload();
-            _loadAttemptCount++;
         }
 
         public void Dispose()
