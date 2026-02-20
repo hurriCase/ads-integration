@@ -46,6 +46,7 @@ namespace AdsIntegration.Runtime.Providers.Azerion
             GameDistribution.OnPauseGame += PauseGame;
             GameDistribution.OnRewardedVideoSuccess += OnRewardedAdFinished;
             GameDistribution.OnRewardedVideoFailure += OnRewardedAdDisplayFailed;
+            GameDistribution.OnPreloadRewardedVideo += OnRewardedVideoPreloaded;
 
             IsInitialized = true;
         }
@@ -63,6 +64,11 @@ namespace AdsIntegration.Runtime.Providers.Azerion
         public void PreloadRewarded()
         {
             GameDistribution.Instance.PreloadRewardedAd();
+        }
+
+        private void OnRewardedVideoPreloaded(int loaded)
+        {
+            _isRewardedAvailable.OnNext(loaded == 1);
         }
 
         public void PreloadInterstitial() { }
@@ -98,6 +104,7 @@ namespace AdsIntegration.Runtime.Providers.Azerion
             GameDistribution.OnPauseGame -= PauseGame;
             GameDistribution.OnRewardedVideoSuccess -= OnRewardedAdFinished;
             GameDistribution.OnRewardedVideoFailure -= OnRewardedAdDisplayFailed;
+            GameDistribution.OnPreloadRewardedVideo -= OnRewardedVideoPreloaded;
         }
     }
 }

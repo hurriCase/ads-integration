@@ -25,8 +25,11 @@ namespace AdsIntegration.Runtime.Providers.Crazy
 
         public void Initialize()
         {
-            CrazySDK.Ad.HasAdblock(hasAdblock => _isRewardedAvailable.OnNext(hasAdblock is false));
-            CrazySDK.Ad.HasAdblock(hasAdblock => _isInterstitialAvailable.OnNext(hasAdblock is false));
+            CrazySDK.Ad.HasAdblock(hasAdblock =>
+            {
+                _isRewardedAvailable.OnNext(!hasAdblock);
+                _isInterstitialAvailable.OnNext(!hasAdblock);
+            });
 
             IsInitialized = true;
         }
@@ -36,7 +39,7 @@ namespace AdsIntegration.Runtime.Providers.Crazy
             CrazySDK.Ad.RequestAd(
                 CrazyAdType.Rewarded,
                 static () => Logger.Log("[CrazyGamesAdsProvider::OnRewardedAdStarted] Showing Rewarded ads"),
-                static error => Logger.LogError($"[CrazyGamesAdsProvider::OnRewardedAdDisplayFailed] " +
+                static error => Logger.LogError("[CrazyGamesAdsProvider::OnRewardedAdDisplayFailed] " +
                                                 $"Rewarded ad display failed with {error.message} error"),
                 OnRewardedAdFinished);
         }
@@ -47,7 +50,7 @@ namespace AdsIntegration.Runtime.Providers.Crazy
                 CrazyAdType.Midgame,
                 static () => Logger.Log("[CrazyGamesAdsProvider::OnInterstitialAdStarted] " +
                                         "Showing interstitial ads"),
-                static error => Logger.LogError($"[CrazyGamesAdsProvider::OnInterstitialAdDisplayFailed] " +
+                static error => Logger.LogError("[CrazyGamesAdsProvider::OnInterstitialAdDisplayFailed] " +
                                                 $"Interstitial ad display failed with {error.message} error"),
                 static () =>
                     Logger.Log("[CrazyGamesAdsProvider::OnInterstitialAdFinished] Interstitial successfully finished"));
@@ -66,7 +69,6 @@ namespace AdsIntegration.Runtime.Providers.Crazy
         private void OnRewardedAdFinished()
         {
             _rewardedSuccess.OnNext(Unit.Default);
-            _isRewardedAvailable.OnNext(false);
         }
 
         public void Dispose()

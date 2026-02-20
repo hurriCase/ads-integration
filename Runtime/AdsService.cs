@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using AdsIntegration.Runtime.Base;
 using CustomUtils.Runtime.Extensions.Observables;
 using ImprovedTimers;
@@ -16,14 +17,11 @@ namespace AdsIntegration.Runtime
 
         private Action _onRewarded;
 
-        private CountdownTimer _interstitialTimer;
-
-        private IDisposable _rewardSubscription;
-
         private readonly IAdsProvider<TPlacement> _adsProvider;
         private readonly AdsConfigBase<TPlacement> _adsConfig;
-        private readonly AdsPreloader _rewardedPreloader;
-        private readonly AdsPreloader _interstitialPreloader;
+
+        private readonly CountdownTimer _interstitialTimer;
+        private readonly IDisposable _subscriptions;
 
         public AdsService(IAdsProvider<TPlacement> adsProvider, AdsConfigBase<TPlacement> adsConfig)
         {
@@ -32,27 +30,25 @@ namespace AdsIntegration.Runtime
 
             _adsProvider.Initialize();
 
-            _rewardedPreloader = new AdsPreloader(
-                _adsProvider.IsRewardedAvailable,
-                _adsProvider.PreloadRewarded,
-                _adsConfig.MaxRewardedLoadAttempts,
-                _adsConfig.RetryLoadDelay);
-
-            _interstitialPreloader = new AdsPreloader(
-                _adsProvider.IsInterstitialAvailable,
-                _adsProvider.PreloadInterstitial,
-                _adsConfig.MaxInterstitialLoadAttempts,
-                _adsConfig.RetryLoadDelay);
-
             _interstitialTimer = new CountdownTimer(_adsConfig.TimeBetweenInterstitials);
 
-            _rewardSubscription = _adsProvider.OnRewardedSuccess
+            var rewardPreload = _adsProvider.IsRewardedAvailable
+                .Where(static isAvailable => !isAvailable)
+                .SubscribeSelf(this, static self => self._adsProvider.PreloadRewarded());
+
+            var interstitialPreload = _adsProvider.IsInterstitialAvailable
+                .Where(static isAvailable => !isAvailable)
+                .SubscribeSelf(this, static self => self._adsProvider.PreloadInterstitial());
+
+            var reward = _adsProvider.OnRewardedSuccess
                 .SubscribeSelf(this, static self => self.ExecuteReward());
+
+            _subscriptions = Disposable.Combine(rewardPreload, interstitialPreload, reward);
         }
 
         public void ShowRewardedAd(TPlacement placement, Action onRewarded)
         {
-            if (!ValidateRequest(placement, nameof(ShowRewardedAd)))
+            if (!ValidateRequest(placement))
                 return;
 
             Logger.Log($"[AdsService::ShowRewardedAd] Showing rewarded ad for {placement}");
@@ -62,7 +58,7 @@ namespace AdsIntegration.Runtime
 
         public void ShowInterstitial(TPlacement placement)
         {
-            if (!ValidateRequest(placement, nameof(ShowInterstitial)))
+            if (!ValidateRequest(placement))
                 return;
 
             if (_interstitialTimer.IsRunning)
@@ -91,7 +87,7 @@ namespace AdsIntegration.Runtime
             _onRewarded = null;
         }
 
-        private bool ValidateRequest(TPlacement placement, string callerName)
+        private bool ValidateRequest(TPlacement placement, [CallerMemberName] string callerName = "")
         {
             if (!_adsProvider.IsInitialized)
             {
@@ -109,9 +105,7 @@ namespace AdsIntegration.Runtime
         public void Dispose()
         {
             _interstitialTimer.Dispose();
-            _rewardSubscription.Dispose();
-            _rewardedPreloader.Dispose();
-            _interstitialPreloader.Dispose();
+            _subscriptions.Dispose();
 
             _adsProvider.Dispose();
         }
