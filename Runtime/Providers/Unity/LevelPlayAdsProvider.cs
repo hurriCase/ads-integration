@@ -2,6 +2,8 @@
 using System;
 using System.Diagnostics;
 using AdsIntegration.Runtime.Base;
+using AdsIntegration.Runtime.Providers.Unity.Data;
+using AdsIntegration.Runtime.Providers.Unity.Wrappers;
 using JetBrains.Annotations;
 using R3;
 using Unity.Services.LevelPlay;
@@ -41,19 +43,30 @@ namespace AdsIntegration.Runtime.Providers.Unity
             LevelPlay.OnInitFailed += OnSdkInitFailed;
             LevelPlay.OnImpressionDataReady += OnImpressionDataReady;
 
-            LevelPlay.Init(_levelPlayConfig.AppKey);
+            LevelPlay.Init(_levelPlayConfig.AdsData.AppKey);
         }
 
         private void OnSdkInitSuccess(LevelPlayConfiguration levelPlayConfiguration)
         {
-            _rewardedAd = new RewardedAdWrapper(_levelPlayConfig.RewardedAdUnitId, _isRewardedAvailable, _rewardedSuccess);
-            _interstitialAd = new InterstitialAdWrapper(_levelPlayConfig.InterstitialAdUnitId, _isInterstitialAvailable);
+            _rewardedAd = new RewardedAdWrapper(
+                _levelPlayConfig.AdsData.RewardedAdUnitId,
+                _levelPlayConfig.RewardedConfig,
+                _isRewardedAvailable,
+                _rewardedSuccess);
+
+            _interstitialAd = new InterstitialAdWrapper(
+                _levelPlayConfig.AdsData.InterstitialAdUnitId,
+                _levelPlayConfig.InterstitialConfig,
+                _isInterstitialAvailable);
 
             Application.focusChanged += OnApplicationFocusChanged;
 
             EnableTestMode();
 
             IsInitialized = true;
+
+            PreloadRewarded();
+            PreloadInterstitial();
         }
 
         private void OnSdkInitFailed(LevelPlayInitError levelPlayInitError)

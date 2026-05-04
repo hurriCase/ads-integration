@@ -1,19 +1,22 @@
 ﻿#if LEVEL_PLAY
 using System;
+using AdsIntegration.Runtime.Providers.Unity.Data;
 using R3;
 using Unity.Services.LevelPlay;
 
-namespace AdsIntegration.Runtime.Providers.Unity
+namespace AdsIntegration.Runtime.Providers.Unity.Wrappers
 {
     internal sealed class InterstitialAdWrapper : IDisposable
     {
+        private readonly AdLoadRetryHandler _retryHandler;
         private readonly LevelPlayInterstitialAd _interstitialAd;
         private readonly ReactiveProperty<bool> _isAvailable;
 
-        internal InterstitialAdWrapper(string adUnitId, ReactiveProperty<bool> isAvailable)
+        internal InterstitialAdWrapper(string adUnitId, RetryConfig retryConfig, ReactiveProperty<bool> isAvailable)
         {
             _isAvailable = isAvailable;
             _interstitialAd = new LevelPlayInterstitialAd(adUnitId);
+            _retryHandler = new AdLoadRetryHandler(Load, retryConfig);
 
             _interstitialAd.OnAdLoaded += OnLoaded;
             _interstitialAd.OnAdLoadFailed += OnLoadFailed;
@@ -30,9 +33,23 @@ namespace AdsIntegration.Runtime.Providers.Unity
             _interstitialAd.LoadAd();
         }
 
-        private void OnLoaded(LevelPlayAdInfo info) => _isAvailable.OnNext(_interstitialAd.IsAdReady());
-        private void OnLoadFailed(LevelPlayAdError error) => _isAvailable.OnNext(_interstitialAd.IsAdReady());
-        private void OnClosed(LevelPlayAdInfo info) => _isAvailable.OnNext(_interstitialAd.IsAdReady());
+        private void OnLoaded(LevelPlayAdInfo info)
+        {
+            _retryHandler.OnLoadSuccess();
+            _isAvailable.OnNext(_interstitialAd.IsAdReady());
+        }
+
+        private void OnLoadFailed(LevelPlayAdError error)
+        {
+            _retryHandler.OnLoadFailed();
+            _isAvailable.OnNext(_interstitialAd.IsAdReady());
+        }
+
+        private void OnClosed(LevelPlayAdInfo info)
+        {
+            _isAvailable.OnNext(_interstitialAd.IsAdReady());
+            _interstitialAd.LoadAd();
+        }
 
         public void Dispose()
         {
@@ -40,6 +57,7 @@ namespace AdsIntegration.Runtime.Providers.Unity
             _interstitialAd.OnAdLoadFailed -= OnLoadFailed;
             _interstitialAd.OnAdClosed -= OnClosed;
             _interstitialAd.Dispose();
+            _retryHandler.Dispose();
         }
     }
 }
