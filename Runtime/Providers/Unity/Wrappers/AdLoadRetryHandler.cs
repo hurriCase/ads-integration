@@ -8,14 +8,14 @@ namespace AdsIntegration.Runtime.Providers.Unity.Wrappers
 {
     internal sealed class AdLoadRetryHandler : IDisposable
     {
-        private readonly Action _load;
+        private readonly Action _loadCallback;
         private readonly RetryConfig _retryConfig;
         private CancellationTokenSource _cancellationSource;
         private int _attemptCount;
 
-        internal AdLoadRetryHandler(Action load, RetryConfig retryConfig)
+        internal AdLoadRetryHandler(Action loadCallback, RetryConfig retryConfig)
         {
-            _load = load;
+            _loadCallback = loadCallback;
             _retryConfig = retryConfig;
         }
 
@@ -28,7 +28,7 @@ namespace AdsIntegration.Runtime.Providers.Unity.Wrappers
 
             if (_attemptCount == 1)
             {
-                _load();
+                _loadCallback();
                 return;
             }
 
@@ -41,10 +41,10 @@ namespace AdsIntegration.Runtime.Providers.Unity.Wrappers
             _attemptCount = 0;
         }
 
-        private async UniTask RetryAsync(CancellationToken cancellationToken)
+        private async UniTask RetryAsync(CancellationToken token)
         {
-            await UniTask.WaitForSeconds(_retryConfig.RetryDelay, cancellationToken: cancellationToken);
-            _load();
+            await UniTask.WaitForSeconds(_retryConfig.RetryDelay, cancellationToken: token);
+            _loadCallback();
         }
 
         public void Dispose()

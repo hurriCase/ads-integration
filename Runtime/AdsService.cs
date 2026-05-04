@@ -32,18 +32,8 @@ namespace AdsIntegration.Runtime
 
             _interstitialTimer = new CountdownTimer(_adsConfig.TimeBetweenInterstitials);
 
-            var rewardPreload = _adsProvider.IsRewardedAvailable
-                .Where(static isAvailable => !isAvailable)
-                .SubscribeSelf(this, static self => self._adsProvider.PreloadRewarded());
-
-            var interstitialPreload = _adsProvider.IsInterstitialAvailable
-                .Where(static isAvailable => !isAvailable)
-                .SubscribeSelf(this, static self => self._adsProvider.PreloadInterstitial());
-
-            var reward = _adsProvider.OnRewardedSuccess
+            _subscriptions = _adsProvider.OnRewardedSuccess
                 .SubscribeSelf(this, static self => self.ExecuteReward());
-
-            _subscriptions = Disposable.Combine(rewardPreload, interstitialPreload, reward);
         }
 
         public void ShowRewardedAd(TPlacement placement, Action onRewarded)
@@ -76,12 +66,6 @@ namespace AdsIntegration.Runtime
 
         private void ExecuteReward()
         {
-            if (!_adsProvider.IsInitialized)
-            {
-                Logger.LogWarning("[AdsService::ExecuteReward] Provider is not initialized, skipping reward");
-                return;
-            }
-
             Logger.Log("[AdsService::ExecuteReward] Reward executed successfully");
             _onRewarded?.Invoke();
             _onRewarded = null;
