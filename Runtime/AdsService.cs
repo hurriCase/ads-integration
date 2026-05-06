@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using AdsIntegration.Runtime.Base;
 using CustomUtils.Runtime.Extensions.Observables;
+using CustomUtils.Runtime.Storage;
 using ImprovedTimers;
 using JetBrains.Annotations;
 using R3;
@@ -12,10 +13,13 @@ namespace AdsIntegration.Runtime
     public class AdsService<TPlacement>
         where TPlacement : unmanaged, Enum
     {
+        public ReadOnlyReactiveProperty<bool> IsNoAds => _isNoAds.Property;
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _adsProvider.IsRewardedAvailable;
         public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _adsProvider.IsInterstitialAvailable;
 
         private Action _onRewarded;
+
+        private PersistentReactiveProperty<bool> _isNoAds = new();
 
         private readonly IAdsProvider<TPlacement> _adsProvider;
         private readonly AdsConfigBase<TPlacement> _adsConfig;
@@ -36,6 +40,11 @@ namespace AdsIntegration.Runtime
                 .SubscribeSelf(this, static self => self.ExecuteReward());
         }
 
+        public void ToggleNoAds(bool isNoAds)
+        {
+            _isNoAds.Value = isNoAds;
+        }
+
         public void ShowRewardedAd(TPlacement placement, Action onRewarded)
         {
             if (!ValidateRequest(placement))
@@ -48,12 +57,18 @@ namespace AdsIntegration.Runtime
 
         public void ShowInterstitial(TPlacement placement)
         {
+            if (_isNoAds.Value)
+            {
+                Logger.Log("[AdsService::ShowInterstitial] Has No Ads, skipping");
+                return;
+            }
+
             if (!ValidateRequest(placement))
                 return;
 
             if (_interstitialTimer.IsRunning)
             {
-                Logger.LogWarning("[AdsService::ShowInterstitial] Cooldown is active, skipping");
+                Logger.Log("[AdsService::ShowInterstitial] Cooldown is active, skipping");
                 return;
             }
 
