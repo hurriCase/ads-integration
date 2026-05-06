@@ -2,7 +2,6 @@
 using System.Runtime.CompilerServices;
 using AdsIntegration.Runtime.Base;
 using CustomUtils.Runtime.Extensions.Observables;
-using CustomUtils.Runtime.Storage;
 using ImprovedTimers;
 using JetBrains.Annotations;
 using R3;
@@ -13,13 +12,13 @@ namespace AdsIntegration.Runtime
     public class AdsService<TPlacement>
         where TPlacement : unmanaged, Enum
     {
-        public ReadOnlyReactiveProperty<bool> IsNoAds => _isNoAds.Property;
+        public ReadOnlyReactiveProperty<bool> IsNoAds => _isNoAds;
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _adsProvider.IsRewardedAvailable;
         public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _adsProvider.IsInterstitialAvailable;
 
         private Action _onRewarded;
 
-        private PersistentReactiveProperty<bool> _isNoAds = new();
+        private ReactiveProperty<bool> _isNoAds = new();
 
         private readonly IAdsProvider<TPlacement> _adsProvider;
         private readonly AdsConfigBase<TPlacement> _adsConfig;
