@@ -35,8 +35,13 @@ namespace AdsIntegration.Runtime
 
             _interstitialTimer = new CountdownTimer(_adsConfig.TimeBetweenInterstitials);
 
-            _subscriptions = _adsProvider.OnRewardedSuccess
+            var rewardSubscription = _adsProvider.OnRewardedSuccess
                 .SubscribeSelf(this, static self => self.ExecuteReward());
+
+            var interstitialSubscription = _adsProvider.OnInterstitialClosed
+                .SubscribeSelf(this, static self => self.RestartInterstitialCooldown());
+
+            _subscriptions = Disposable.Combine(rewardSubscription, interstitialSubscription);
         }
 
         public void ToggleNoAds(bool isNoAds)
@@ -73,9 +78,6 @@ namespace AdsIntegration.Runtime
 
             Logger.Log($"[AdsService::ShowInterstitial] Showing interstitial for {placement}");
             _adsProvider.ShowInterstitial();
-
-            _interstitialTimer.Reset();
-            _interstitialTimer.Start();
         }
 
         private void ExecuteReward()
@@ -83,6 +85,15 @@ namespace AdsIntegration.Runtime
             Logger.Log("[AdsService::ExecuteReward] Reward executed successfully");
             _onRewarded?.Invoke();
             _onRewarded = null;
+
+            _interstitialTimer.Reset();
+            _interstitialTimer.Start();
+        }
+
+        private void RestartInterstitialCooldown()
+        {
+            _interstitialTimer.Reset();
+            _interstitialTimer.Start();
         }
 
         private bool ValidateRequest(TPlacement placement, [CallerMemberName] string callerName = "")

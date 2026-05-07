@@ -8,6 +8,7 @@ namespace AdsIntegration.Runtime.Base
     {
         bool IsInitialized { get; }
         Observable<Unit> OnRewardedSuccess { get; }
+        Observable<Unit> OnInterstitialClosed { get; }
         ReadOnlyReactiveProperty<bool> IsRewardedAvailable { get; }
         ReadOnlyReactiveProperty<bool> IsInterstitialAvailable { get; }
         void Initialize();
