@@ -15,6 +15,7 @@ namespace AdsIntegration.Runtime
         public ReadOnlyReactiveProperty<bool> IsNoAds => _isNoAds;
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _adsProvider.IsRewardedAvailable;
         public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _adsProvider.IsInterstitialAvailable;
+        public Observable<Unit> OnInterstitialClosed => _adsProvider.OnInterstitialClosed;
 
         private Action _onRewarded;
 
