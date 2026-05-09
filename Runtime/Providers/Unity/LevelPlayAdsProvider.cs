@@ -120,7 +120,9 @@ namespace AdsIntegration.Runtime.Providers.Unity
 
         private void OnApplicationFocusChanged(bool hasFocus)
         {
+#if !UNITY_ANDROID
             LevelPlay.SetPauseGame(!hasFocus);
+#endif
         }
 
         public void Dispose()
