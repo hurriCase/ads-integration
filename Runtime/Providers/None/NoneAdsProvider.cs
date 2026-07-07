@@ -1,9 +1,12 @@
 ﻿using System;
 using AdsIntegration.Runtime.Base;
 using JetBrains.Annotations;
-using PrimeTween;
 using R3;
 using UnityEngine;
+
+#if PRIMETWEEN_INSTALLED
+using PrimeTween;
+#endif
 
 namespace AdsIntegration.Runtime.Providers.None
 {
@@ -32,12 +35,18 @@ namespace AdsIntegration.Runtime.Providers.None
 
         public void ShowRewarded(TPlacement placement)
         {
-            Tween.Delay(FakeAdsFinishDuration, () =>
-            {
-                Debug.Log($"[NoneAdsProvider::ShowRewarded] Rewarded ads was shown for {placement}");
-                _rewardedSuccess.OnNext(Unit.Default);
-                _isRewardedAvailable.OnNext(false);
-            }, useUnscaledTime: true);
+#if PRIMETWEEN_INSTALLED
+            Tween.Delay(FakeAdsFinishDuration, () => FinishRewardedAd(placement), useUnscaledTime: true);
+#else
+            FinishRewardedAd(placement);
+#endif
+        }
+
+        private void FinishRewardedAd(TPlacement placement)
+        {
+            Debug.Log($"[NoneAdsProvider::ShowRewarded] Rewarded ads was shown for {placement}");
+            _rewardedSuccess.OnNext(Unit.Default);
+            _isRewardedAvailable.OnNext(false);
         }
 
         public void ShowInterstitial()
