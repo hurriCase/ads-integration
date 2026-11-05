@@ -15,7 +15,11 @@ namespace AdsIntegration.Runtime
         public ReadOnlyReactiveProperty<bool> IsNoAds => _isNoAds;
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _adsProvider.IsRewardedAvailable;
         public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _adsProvider.IsInterstitialAvailable;
+        public Observable<Unit> OnInterstitialDisplayed => _adsProvider.OnInterstitialDisplayed;
         public Observable<Unit> OnInterstitialClosed => _adsProvider.OnInterstitialClosed;
+
+        protected virtual float InterstitialCooldownSeconds => _adsConfig.TimeBetweenInterstitials;
+        protected virtual float RewardedCooldownSeconds => _adsConfig.TimeBetweenInterstitials;
 
         private Action _onRewarded;
 
@@ -40,7 +44,7 @@ namespace AdsIntegration.Runtime
                 .SubscribeSelf(this, static self => self.ExecuteReward());
 
             var interstitialSubscription = _adsProvider.OnInterstitialClosed
-                .SubscribeSelf(this, static self => self.RestartInterstitialCooldown());
+                .SubscribeSelf(this, static self => self.StartInterstitialCooldown(self.InterstitialCooldownSeconds));
 
             _subscriptions = Disposable.Combine(rewardSubscription, interstitialSubscription);
         }
@@ -87,13 +91,12 @@ namespace AdsIntegration.Runtime
             _onRewarded?.Invoke();
             _onRewarded = null;
 
-            _interstitialTimer.Reset();
-            _interstitialTimer.Start();
+            StartInterstitialCooldown(RewardedCooldownSeconds);
         }
 
-        private void RestartInterstitialCooldown()
+        private void StartInterstitialCooldown(float cooldownSeconds)
         {
-            _interstitialTimer.Reset();
+            _interstitialTimer.Reset(cooldownSeconds);
             _interstitialTimer.Start();
         }
 

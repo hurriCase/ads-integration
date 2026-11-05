@@ -11,21 +11,25 @@ namespace AdsIntegration.Runtime.Providers.Unity.Wrappers
         private readonly AdLoadRetryHandler _retryHandler;
         private readonly LevelPlayInterstitialAd _interstitialAd;
         private readonly ReactiveProperty<bool> _isAvailable;
+        private readonly Subject<Unit> _interstitialDisplayed;
         private readonly Subject<Unit> _interstitialClosed;
 
         internal InterstitialAdWrapper(
             string adUnitId,
             RetryConfig retryConfig,
             ReactiveProperty<bool> isAvailable,
+            Subject<Unit> interstitialDisplayed,
             Subject<Unit> interstitialClosed)
         {
             _isAvailable = isAvailable;
             _interstitialAd = new LevelPlayInterstitialAd(adUnitId);
             _retryHandler = new AdLoadRetryHandler(Load, retryConfig);
+            _interstitialDisplayed = interstitialDisplayed;
             _interstitialClosed = interstitialClosed;
 
             _interstitialAd.OnAdLoaded += OnLoaded;
             _interstitialAd.OnAdLoadFailed += OnLoadFailed;
+            _interstitialAd.OnAdDisplayed += OnDisplayed;
             _interstitialAd.OnAdClosed += OnClosed;
         }
 
@@ -51,6 +55,11 @@ namespace AdsIntegration.Runtime.Providers.Unity.Wrappers
             _isAvailable.OnNext(_interstitialAd.IsAdReady());
         }
 
+        private void OnDisplayed(LevelPlayAdInfo info)
+        {
+            _interstitialDisplayed.OnNext(Unit.Default);
+        }
+
         private void OnClosed(LevelPlayAdInfo info)
         {
             _isAvailable.OnNext(_interstitialAd.IsAdReady());
@@ -62,6 +71,7 @@ namespace AdsIntegration.Runtime.Providers.Unity.Wrappers
         {
             _interstitialAd.OnAdLoaded -= OnLoaded;
             _interstitialAd.OnAdLoadFailed -= OnLoadFailed;
+            _interstitialAd.OnAdDisplayed -= OnDisplayed;
             _interstitialAd.OnAdClosed -= OnClosed;
             _interstitialAd.Dispose();
             _retryHandler.Dispose();

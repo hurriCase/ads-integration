@@ -17,11 +17,13 @@ namespace AdsIntegration.Runtime.Providers.None
         public bool IsInitialized { get; private set; }
 
         public Observable<Unit> OnRewardedSuccess => _rewardedSuccess;
+        public Observable<Unit> OnInterstitialDisplayed => _interstitialDisplayed;
         public Observable<Unit> OnInterstitialClosed => _interstitialClosed;
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _isRewardedAvailable;
         public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _isInterstitialAvailable;
 
         private readonly Subject<Unit> _rewardedSuccess = new();
+        private readonly Subject<Unit> _interstitialDisplayed = new();
         private readonly Subject<Unit> _interstitialClosed = new();
         private readonly ReactiveProperty<bool> _isRewardedAvailable = new(true);
         private readonly ReactiveProperty<bool> _isInterstitialAvailable = new(true);
@@ -53,6 +55,8 @@ namespace AdsIntegration.Runtime.Providers.None
         {
             Debug.Log("[NoneAdsProvider::ShowInterstitial] Interstitial ads was shown");
             _isInterstitialAvailable.OnNext(false);
+            _interstitialDisplayed.OnNext(Unit.Default);
+            _interstitialClosed.OnNext(Unit.Default);
         }
 
         public void PreloadRewarded()
@@ -70,6 +74,7 @@ namespace AdsIntegration.Runtime.Providers.None
         public void Dispose()
         {
             _rewardedSuccess.Dispose();
+            _interstitialDisplayed.Dispose();
             _interstitialClosed.Dispose();
             _isRewardedAvailable.Dispose();
             _isInterstitialAvailable.Dispose();

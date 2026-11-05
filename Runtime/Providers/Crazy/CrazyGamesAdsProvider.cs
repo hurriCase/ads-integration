@@ -14,11 +14,15 @@ namespace AdsIntegration.Runtime.Providers.Crazy
         public bool IsInitialized { get; private set; }
 
         public Observable<Unit> OnRewardedSuccess => _rewardedSuccess;
+        public Observable<Unit> OnInterstitialDisplayed => _interstitialDisplayed;
+        public Observable<Unit> OnInterstitialClosed => _interstitialClosed;
 
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _isRewardedAvailable;
         public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _isInterstitialAvailable;
 
         private readonly Subject<Unit> _rewardedSuccess = new();
+        private readonly Subject<Unit> _interstitialDisplayed = new();
+        private readonly Subject<Unit> _interstitialClosed = new();
 
         private readonly ReactiveProperty<bool> _isRewardedAvailable = new(true);
         private readonly ReactiveProperty<bool> _isInterstitialAvailable = new(true);
@@ -48,12 +52,10 @@ namespace AdsIntegration.Runtime.Providers.Crazy
         {
             CrazySDK.Ad.RequestAd(
                 CrazyAdType.Midgame,
-                static () => Logger.Log("[CrazyGamesAdsProvider::OnInterstitialAdStarted] " +
-                                        "Showing interstitial ads"),
+                OnInterstitialAdStarted,
                 static error => Logger.LogError("[CrazyGamesAdsProvider::OnInterstitialAdDisplayFailed] " +
                                                 $"Interstitial ad display failed with {error.message} error"),
-                static () =>
-                    Logger.Log("[CrazyGamesAdsProvider::OnInterstitialAdFinished] Interstitial successfully finished"));
+                OnInterstitialAdFinished);
         }
 
         public void PreloadRewarded()
@@ -66,6 +68,18 @@ namespace AdsIntegration.Runtime.Providers.Crazy
             CrazySDK.Ad.PrefetchAd(CrazyAdType.Midgame);
         }
 
+        private void OnInterstitialAdStarted()
+        {
+            Logger.Log("[CrazyGamesAdsProvider::OnInterstitialAdStarted] Showing interstitial ads");
+            _interstitialDisplayed.OnNext(Unit.Default);
+        }
+
+        private void OnInterstitialAdFinished()
+        {
+            Logger.Log("[CrazyGamesAdsProvider::OnInterstitialAdFinished] Interstitial successfully finished");
+            _interstitialClosed.OnNext(Unit.Default);
+        }
+
         private void OnRewardedAdFinished()
         {
             _rewardedSuccess.OnNext(Unit.Default);
@@ -74,6 +88,8 @@ namespace AdsIntegration.Runtime.Providers.Crazy
         public void Dispose()
         {
             _rewardedSuccess.Dispose();
+            _interstitialDisplayed.Dispose();
+            _interstitialClosed.Dispose();
             _isRewardedAvailable.Dispose();
             _isInterstitialAvailable.Dispose();
         }

@@ -16,16 +16,23 @@ namespace AdsIntegration.Runtime.Providers.Azerion
         public bool IsInitialized { get; private set; }
 
         public Observable<Unit> OnRewardedSuccess => _rewardedSuccess;
+        public Observable<Unit> OnInterstitialDisplayed => _interstitialDisplayed;
+        public Observable<Unit> OnInterstitialClosed => _interstitialClosed;
 
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _isRewardedAvailable;
         public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _isInterstitialAvailable;
 
         private readonly Subject<Unit> _rewardedSuccess = new();
+        private readonly Subject<Unit> _interstitialDisplayed = new();
+        private readonly Subject<Unit> _interstitialClosed = new();
 
         private readonly ReactiveProperty<bool> _isRewardedAvailable = new(true);
         private readonly ReactiveProperty<bool> _isInterstitialAvailable = new(true);
 
         private readonly AzerionConfig<TPlacement> _adsConfig;
+
+        private bool _isInterstitialRequested;
+        private bool _isInterstitialDisplayed;
 
         public AzerionAdsService(AzerionConfig<TPlacement> adsConfig)
         {
@@ -58,6 +65,7 @@ namespace AdsIntegration.Runtime.Providers.Azerion
 
         public void ShowInterstitial()
         {
+            _isInterstitialRequested = true;
             GameDistribution.Instance.ShowAd();
         }
 
@@ -84,19 +92,38 @@ namespace AdsIntegration.Runtime.Providers.Azerion
             _isRewardedAvailable.OnNext(false);
         }
 
-        private void ResumeGame()
-        {
-            Time.timeScale = 1;
-        }
-
+        // GameDistribution reports every ad type through the same pause and resume events,
+        // and has no interstitial callbacks, so the request flag tells interstitials from rewarded ads.
         private void PauseGame()
         {
             Time.timeScale = 0;
+
+            if (!_isInterstitialRequested)
+                return;
+
+            _isInterstitialRequested = false;
+            _isInterstitialDisplayed = true;
+            _interstitialDisplayed.OnNext(Unit.Default);
+        }
+
+        private void ResumeGame()
+        {
+            Time.timeScale = 1;
+
+            _isInterstitialRequested = false;
+
+            if (!_isInterstitialDisplayed)
+                return;
+
+            _isInterstitialDisplayed = false;
+            _interstitialClosed.OnNext(Unit.Default);
         }
 
         public void Dispose()
         {
             _rewardedSuccess.Dispose();
+            _interstitialDisplayed.Dispose();
+            _interstitialClosed.Dispose();
             _isRewardedAvailable.Dispose();
             _isInterstitialAvailable.Dispose();
 

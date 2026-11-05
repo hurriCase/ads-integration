@@ -18,11 +18,13 @@ namespace AdsIntegration.Runtime.Providers.Unity
         public bool IsInitialized { get; private set; }
 
         public Observable<Unit> OnRewardedSuccess => _rewardedSuccess;
+        public Observable<Unit> OnInterstitialDisplayed => _interstitialDisplayed;
         public Observable<Unit> OnInterstitialClosed => _interstitialClosed;
         public ReadOnlyReactiveProperty<bool> IsRewardedAvailable => _isRewardedAvailable;
         public ReadOnlyReactiveProperty<bool> IsInterstitialAvailable => _isInterstitialAvailable;
 
         private readonly Subject<Unit> _rewardedSuccess = new();
+        private readonly Subject<Unit> _interstitialDisplayed = new();
         private readonly Subject<Unit> _interstitialClosed = new();
         private readonly ReactiveProperty<bool> _isRewardedAvailable = new();
         private readonly ReactiveProperty<bool> _isInterstitialAvailable = new();
@@ -60,6 +62,7 @@ namespace AdsIntegration.Runtime.Providers.Unity
                 _levelPlayConfig.AdsData.InterstitialAdUnitId,
                 _levelPlayConfig.InterstitialConfig,
                 _isInterstitialAvailable,
+                _interstitialDisplayed,
                 _interstitialClosed);
 
             Application.focusChanged += OnApplicationFocusChanged;
@@ -135,6 +138,7 @@ namespace AdsIntegration.Runtime.Providers.Unity
             _interstitialAd?.Dispose();
 
             _rewardedSuccess.Dispose();
+            _interstitialDisplayed.Dispose();
             _interstitialClosed.Dispose();
             _isRewardedAvailable.Dispose();
             _isInterstitialAvailable.Dispose();
